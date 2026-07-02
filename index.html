@@ -73,6 +73,10 @@
           <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Judul Lembar Soal</label>
           <input type="text" id="inputJudul" value="Ujian Akhir Semester Ganjil - IPA Kelas 6" class="w-full px-3.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm font-medium transition" placeholder="Masukkan judul ujian...">
         </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Deskripsi Ujian (Konteks)</label>
+          <textarea id="inputDeskripsi" class="w-full h-16 px-3.5 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition custom-scrollbar" placeholder="Masukkan target kompetensi atau deskripsi ujian..."></textarea>
+        </div>
       </div>
 
       <!-- Generator Settings -->
@@ -101,6 +105,29 @@
               <i class="fa-solid fa-laptop-code text-slate-500 text-lg"></i>
               <span class="text-xs font-bold leading-tight">Proyek Praktis</span>
             </button>
+          </div>
+        </div>
+
+        <!-- Default Point Values -->
+        <div class="mt-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+          <label class="block text-xs font-bold text-indigo-900 mb-2">Nilai Default Poin Soal</label>
+          <div class="grid grid-cols-4 gap-2 text-sm">
+            <div>
+              <span class="block text-[10px] text-indigo-700 uppercase tracking-wider">Pilgan</span>
+              <input type="number" id="defaultPoin_pilihan_ganda" value="2" class="w-full border border-indigo-200 rounded-lg px-2 py-1.5 text-center focus:ring-indigo-500 text-xs font-medium" onchange="updateDefaultPoin('pilihan_ganda', this.value)">
+            </div>
+            <div>
+              <span class="block text-[10px] text-indigo-700 uppercase tracking-wider">Uraian</span>
+              <input type="number" id="defaultPoin_uraian" value="5" class="w-full border border-indigo-200 rounded-lg px-2 py-1.5 text-center focus:ring-indigo-500 text-xs font-medium" onchange="updateDefaultPoin('uraian', this.value)">
+            </div>
+            <div>
+              <span class="block text-[10px] text-indigo-700 uppercase tracking-wider">Nalar</span>
+              <input type="number" id="defaultPoin_penalaran" value="15" class="w-full border border-indigo-200 rounded-lg px-2 py-1.5 text-center focus:ring-indigo-500 text-xs font-medium" onchange="updateDefaultPoin('penalaran', this.value)">
+            </div>
+            <div>
+              <span class="block text-[10px] text-indigo-700 uppercase tracking-wider">Proyek</span>
+              <input type="number" id="defaultPoin_proyek" value="25" class="w-full border border-indigo-200 rounded-lg px-2 py-1.5 text-center focus:ring-indigo-500 text-xs font-medium" onchange="updateDefaultPoin('proyek', this.value)">
+            </div>
           </div>
         </div>
 
@@ -134,6 +161,10 @@
           <div id="material-preview-box" class="hidden">
             <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Intisari / Teks Terbaca:</label>
             <textarea id="materialText" class="w-full h-24 p-2.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white" placeholder="Isi materi akan tampil di sini atau ketik manual..."></textarea>
+          </div>
+          <div class="pt-4 border-t border-slate-100">
+            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Instruksi Khusus (Custom Prompt)</label>
+            <textarea id="inputCustomPrompt" class="w-full h-16 p-2.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white custom-scrollbar" placeholder="Tambahkan instruksi spesifik untuk AI di sini (opsional)..."></textarea>
           </div>
         </div>
 
@@ -470,6 +501,18 @@
     let materialTextContent = "";
     let activeTab = 'all';
 
+    // Tambahkan ini
+    let defaultPoints = {
+      pilihan_ganda: 2,
+      uraian: 5,
+      penalaran: 15,
+      proyek: 25
+    };
+
+    function updateDefaultPoin(tipe, val) {
+      defaultPoints[tipe] = parseInt(val) || 0;
+    }
+
     // Primary Question Storage Struct
     let bankSoal = {
       pilihan_ganda: [],
@@ -740,10 +783,11 @@
 
     // Create interactive question layout card component
     function createQuestionCard(item, type, displayIndex) {
-      const card = document.createElement('div');
-      card.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md hover:border-slate-300 transition duration-300 space-y-4 group";
+      const cardOpacityClass = item.is_hidden ? 'opacity-50 bg-slate-50 grayscale-[20%]' : 'bg-white hover:shadow-md hover:border-slate-300';
       
-      // Header of Card
+      const card = document.createElement('div');
+      card.className = `${cardOpacityClass} p-5 rounded-2xl border border-slate-200 shadow-xs transition duration-300 space-y-4 group`;
+      
       const header = document.createElement('div');
       header.className = "flex items-start justify-between gap-4";
       
@@ -754,10 +798,26 @@
       titleContainer.className = "flex-1";
       titleContainer.innerHTML = `<div class="text-sm font-bold text-slate-900 leading-relaxed flex items-start">${indexBadge} ${titleText}</div>`;
       
-      // Controls Panel inside card
+      const toggleIcon = item.is_hidden 
+            ? `<i class="fa-solid fa-eye-slash text-xs"></i>`
+            : `<i class="fa-solid fa-eye text-xs"></i>`;
+
       const controls = document.createElement('div');
-      controls.className = "flex items-center space-x-1 opacity-60 group-hover:opacity-100 transition duration-200";
+      controls.className = "flex items-center space-x-2"; // Dibuat selalu muncul agar poin bisa diedit
+      
+      // Hitung index asli array (untuk manipulasi data)
+      const realIndex = bankSoal[type].findIndex(q => q.id === item.id);
+
       controls.innerHTML = `
+        <div class="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 mr-2">
+          <label class="text-[10px] text-slate-500 font-bold mr-2 uppercase">Poin:</label>
+          <input type="number" value="${item.poin !== undefined ? item.poin : defaultPoints[type]}" 
+                 class="w-12 text-xs border border-slate-200 rounded p-1 text-center focus:ring-indigo-500 bg-white" 
+                 onchange="updateSoalPoin('${type}', '${item.id}', this.value)">
+        </div>
+        <button onclick="toggleSoalVisibility('${type}', '${item.id}')" class="p-1.5 hover:bg-slate-100 hover:text-indigo-600 rounded-lg text-slate-400 transition" title="Toggle Visibilitas">
+          ${toggleIcon}
+        </button>
         <button onclick="editQuestionInline('${type}', '${item.id}')" class="p-1.5 hover:bg-slate-100 hover:text-indigo-600 rounded-lg text-slate-400 transition" title="Edit Soal">
           <i class="fa-solid fa-pen text-xs"></i>
         </button>
@@ -899,6 +959,23 @@
       } else if (type === 'proyek') {
         document.getElementById('modal-field-proyek').classList.remove('hidden');
         populateModalSteps(editItem);
+      }
+    }
+
+    // Memperbarui atribut poin per soal secara individu (berdasarkan ID)
+    function updateSoalPoin(tipe, id, newValue) {
+      const idx = bankSoal[tipe].findIndex(q => q.id === id);
+      if (idx !== -1) {
+         bankSoal[tipe][idx].poin = parseInt(newValue) || 0;
+      }
+    }
+
+    // Toggle Sembunyikan/Tampilkan soal
+    function toggleSoalVisibility(tipe, id) {
+      const idx = bankSoal[tipe].findIndex(q => q.id === id);
+      if (idx !== -1) {
+         bankSoal[tipe][idx].is_hidden = !bankSoal[tipe][idx].is_hidden;
+         renderQuestionList(); // Render ulang untuk efek UI
       }
     }
 
@@ -1074,11 +1151,15 @@
       const activeExistedQuestions = bankSoal[selectedTipe];
       const readMaterial = document.getElementById('materialText').value.trim() || materialTextContent || "";
       const currentJudul = document.getElementById('inputJudul').value || "Ujian Baru";
+      const currentDeskripsi = document.getElementById('inputDeskripsi').value.trim();
+      const currentCustomPrompt = document.getElementById('inputCustomPrompt').value.trim();
 
       // Combined package structure
       const assembledPrompt = {
         InstructionMain: instructionMain,
         JudulSoalProyek: currentJudul,
+        DeskripsiSoal: currentDeskripsi,
+        CustomPrompt: currentCustomPrompt,
         QuestionInstruction: targetInstructionType,
         ExistedQuestion: activeExistedQuestions.length > 0 ? activeExistedQuestions : [],
         MaterialFile: readMaterial
@@ -1188,6 +1269,10 @@
           return;
         }
 
+        // Inject atribut bawaan baru
+        data.poin = defaultPoints[selectedTipe];
+        data.is_hidden = false;
+
         // Validate structure based on selected type
         if (selectedTipe === 'pilihan_ganda') {
           if (!data.soal || !Array.isArray(data.opsi) || !data.id_opsi_benar) {
@@ -1248,7 +1333,7 @@
       document.getElementById('importFile').click();
     }
 
-    // Impor Handler for JSON Bank Soal (Standard format matching ExampleOutputData.json)
+    // Impor Handler for JSON Bank Soal
     function handleImport(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -1258,9 +1343,18 @@
         try {
           const importData = JSON.parse(e.target.result);
           
-          if (importData.metadata && importData.metadata.judul_soal) {
-            document.getElementById('inputJudul').value = importData.metadata.judul_soal;
-            document.getElementById('displayJudulSoal').innerText = importData.metadata.judul_soal;
+          // MODIFIKASI: Membaca metadata tambahan (Deskripsi & Custom Prompt)
+          if (importData.metadata) {
+            if (importData.metadata.judul_soal) {
+              document.getElementById('inputJudul').value = importData.metadata.judul_soal;
+              document.getElementById('displayJudulSoal').innerText = importData.metadata.judul_soal;
+            }
+            if (importData.metadata.deskripsi_soal !== undefined) {
+              document.getElementById('inputDeskripsi').value = importData.metadata.deskripsi_soal;
+            }
+            if (importData.metadata.custom_prompt !== undefined) {
+              document.getElementById('inputCustomPrompt').value = importData.metadata.custom_prompt;
+            }
           }
 
           if (importData.daftar_soal) {
@@ -1288,7 +1382,9 @@
     function exportToJSON() {
       const exportStruct = {
         metadata: {
-          judul_soal: document.getElementById('inputJudul').value || "Ujian"
+          judul_soal: document.getElementById('inputJudul').value || "Ujian",
+          deskripsi_soal: document.getElementById('inputDeskripsi').value || "",
+          custom_prompt: document.getElementById('inputCustomPrompt').value || ""
         },
         daftar_soal: bankSoal
       };
@@ -1310,93 +1406,144 @@
     function exportToDoc() {
       const judul = document.getElementById('inputJudul').value || "Ujian Akhir";
       
+      // 1. Memfilter soal untuk mengabaikan yang berstatus hidden
+      const pgAktif = bankSoal.pilihan_ganda.filter(item => !item.is_hidden);
+      const uraianAktif = bankSoal.uraian.filter(item => !item.is_hidden);
+      const nalarAktif = bankSoal.penalaran.filter(item => !item.is_hidden);
+      const proyekAktif = bankSoal.proyek.filter(item => !item.is_hidden);
+
+      // 2. Modifikasi Styling dengan perbaikan dukungan List dan Page Break
       let htmlDoc = `
-        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='[http://www.w3.org/TR/REC-html40](http://www.w3.org/TR/REC-html40)'>
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
         <head>
           <title>${judul}</title>
           <style>
-            body { font-family: 'Arial', sans-serif; line-height: 1.5; color: #1e293b; }
-            h1 { text-align: center; font-size: 18pt; margin-bottom: 20px; font-weight: bold; text-transform: uppercase; color: #000; }
-            h2 { font-size: 13pt; border-bottom: 2px solid #334155; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px; color: #0f172a; text-transform: uppercase; }
-            .soal-item { margin-bottom: 20px; page-break-inside: avoid; }
-            .soal-text { font-size: 11pt; font-weight: bold; margin-bottom: 5px; }
-            .opt-list { margin-left: 20px; margin-bottom: 10px; }
-            .opt-item { font-size: 10.5pt; margin-bottom: 4px; }
-            .jawaban-box { background-color: #f8fafc; border-left: 3px solid #6366f1; padding: 8px 12px; margin-top: 5px; font-size: 10pt; color: #475569; }
-            .step-list { margin-left: 20px; margin-top: 5px; }
-            .step-item { font-size: 10pt; margin-bottom: 4px; }
+            body { font-family: 'Times New Roman', Times, serif; line-height: 1.5; color: #000; }
+            h1 { text-align: center; font-size: 16pt; margin-bottom: 20px; font-weight: bold; text-transform: uppercase; }
+            h2 { font-size: 14pt; margin-top: 30px; margin-bottom: 15px; font-weight: bold; text-transform: uppercase; }
+            
+            /* Penyesuaian Style untuk List HTML asli */
+            ol { padding-left: 24px; margin-top: 5px; margin-bottom: 15px; }
+            li { font-size: 12pt; margin-bottom: 10px; page-break-inside: avoid; }
+            ol[type="A"] li { margin-bottom: 4px; }
+            
+            .soal-text { margin-bottom: 5px; }
+            .jawaban-box { margin-bottom: 10px; font-size: 12pt; }
+            .step-list { margin-top: 5px; }
           </style>
         </head>
         <body>
           <h1>${judul}</h1>
+          <h1 style="font-size: 14pt; margin-top: -10px;">LEMBAR SOAL</h1>
       `;
 
-      // 1. Pilihan Ganda Section
-      if (bankSoal.pilihan_ganda.length > 0) {
-        htmlDoc += `<h2>I. Pilihan Ganda</h2>`;
-        bankSoal.pilihan_ganda.forEach((item, index) => {
+      // --- BAGIAN SOAL ---
+      if (pgAktif.length > 0) {
+        htmlDoc += `<h2>I. Pilihan Ganda</h2><ol>`;
+        pgAktif.forEach((item) => {
           htmlDoc += `
-            <div class="soal-item">
-              <div class="soal-text">${index + 1}. ${item.soal}</div>
-              <div class="opt-list">
+            <li>
+              <div class="soal-text">${item.soal}</div>
+              <ol type="A">
           `;
           item.opsi.forEach(opt => {
-            htmlDoc += `<div class="opt-item">${opt.id}. ${opt.teks}</div>`;
+            htmlDoc += `<li>${opt.teks}</li>`;
           });
           htmlDoc += `
-              </div>
-              <div class="jawaban-box"><strong>Kunci Jawaban Benar:</strong> ${item.id_opsi_benar}</div>
-            </div>
+              </ol>
+            </li>
           `;
         });
+        htmlDoc += `</ol>`;
       }
 
-      // 2. Uraian Section
-      if (bankSoal.uraian.length > 0) {
-        htmlDoc += `<h2>II. Soal Uraian</h2>`;
-        bankSoal.uraian.forEach((item, index) => {
+      if (uraianAktif.length > 0) {
+        htmlDoc += `<h2>II. Soal Uraian</h2><ol>`;
+        uraianAktif.forEach((item) => {
           htmlDoc += `
-            <div class="soal-item">
-              <div class="soal-text">${index + 1}. ${item.soal}</div>
-              <div class="jawaban-box"><strong>Pedoman Acuan Jawaban:</strong> ${item.jawaban_singkat}</div>
-            </div>
+            <li>
+              <div class="soal-text">${item.soal}</div>
+            </li>
           `;
         });
+        htmlDoc += `</ol>`;
       }
 
-      // 3. Penalaran Section
-      if (bankSoal.penalaran.length > 0) {
-        htmlDoc += `<h2>III. Soal Analisis / Penalaran Kritis</h2>`;
-        bankSoal.penalaran.forEach((item, index) => {
+      if (nalarAktif.length > 0) {
+        htmlDoc += `<h2>III. Soal Analisis / Penalaran Kritis</h2><ol>`;
+        nalarAktif.forEach((item) => {
           htmlDoc += `
-            <div class="soal-item">
-              <div class="soal-text">${index + 1}. ${item.soal}</div>
-              <div class="jawaban-box"><strong>Kunci Jawaban Analisis:</strong> ${item.paragraf_jawaban}</div>
-            </div>
+            <li>
+              <div class="soal-text">${item.soal}</div>
+            </li>
           `;
         });
+        htmlDoc += `</ol>`;
       }
 
-      // 4. Proyek Section
-      if (bankSoal.proyek.length > 0) {
-        htmlDoc += `<h2>IV. Penugasan Proyek Pembelajaran</h2>`;
-        bankSoal.proyek.forEach((item, index) => {
+      // MODIFIKASI: Menambahkan langkah-langkah proyek langsung di bagian soal
+      if (proyekAktif.length > 0) {
+        htmlDoc += `<h2>IV. Penugasan Proyek Pembelajaran</h2><ol>`;
+        proyekAktif.forEach((item) => {
           htmlDoc += `
-            <div class="soal-item">
-              <div class="soal-text">${index + 1}. Proyek: ${item.judul}</div>
-              <p style="font-size: 10.5pt; color: #475569; margin: 4px 0;">${item.deskripsi_proyek}</p>
+            <li>
+              <div class="soal-text">Proyek: ${item.judul}</div>
+              <p style="font-size: 12pt; margin: 4px 0;">${item.deskripsi_proyek}</p>
               <div class="step-list">
                 <strong>Panduan Langkah:</strong>
+                <ol>
           `;
-          item.langkah_langkah.forEach((st, i) => {
-            htmlDoc += `<div class="step-item">${i + 1}. ${st}</div>`;
+          item.langkah_langkah.forEach((st) => {
+            htmlDoc += `<li>${st}</li>`;
           });
           htmlDoc += `
+                </ol>
               </div>
-            </div>
+            </li>
           `;
         });
+        htmlDoc += `</ol>`;
       }
+
+      // --- PEMISAH HALAMAN (PAGE BREAK) ---
+      // Trik paling ampuh agar terdeteksi oleh Word Processor sebagai halaman baru yang murni
+      htmlDoc += `<br clear="all" style="page-break-before:always" />`;
+      
+      htmlDoc += `<h1>KUNCI JAWABAN</h1>`;
+
+      // --- BAGIAN KUNCI JAWABAN ---
+      if (pgAktif.length > 0) {
+        htmlDoc += `<h2>I. Pilihan Ganda</h2><ol>`;
+        pgAktif.forEach((item) => {
+          // MODIFIKASI: Menghapus teks "Kunci:" dan langsung menampilkan ID Opsi
+          htmlDoc += `
+            <li><div class="jawaban-box">${item.id_opsi_benar}</div></li>
+          `;
+        });
+        htmlDoc += `</ol>`;
+      }
+
+      if (uraianAktif.length > 0) {
+        htmlDoc += `<h2>II. Soal Uraian</h2><ol>`;
+        uraianAktif.forEach((item) => {
+          htmlDoc += `
+            <li><div class="jawaban-box">${item.jawaban_singkat}</div></li>
+          `;
+        });
+        htmlDoc += `</ol>`;
+      }
+
+      if (nalarAktif.length > 0) {
+        htmlDoc += `<h2>III. Soal Analisis / Penalaran Kritis</h2><ol>`;
+        nalarAktif.forEach((item) => {
+          htmlDoc += `
+            <li><div class="jawaban-box">${item.paragraf_jawaban}</div></li>
+          `;
+        });
+        htmlDoc += `</ol>`;
+      }
+
+      // MODIFIKASI: Blok Kunci Jawaban untuk Proyek telah dihapus
 
       htmlDoc += `</body></html>`;
 
@@ -1412,8 +1559,7 @@
       downloadAnchor.download = `LembarSoal_${slugTitle}.doc`;
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.remove();
+      document.body.removeChild(downloadAnchor);
 
       showToast("Dokumen lembar soal diunduh!", "success");
     }
